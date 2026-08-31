@@ -216,6 +216,10 @@
     const [y,m,d]=dateStr.split("-").map(Number);
     return Math.floor((Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/86400000);
   }
+  function excelDateText(dateStr){
+    const [y,m,d]=dateStr.split("-").map(Number);
+    return `${String(d).padStart(2,"0")}/${String(m).padStart(2,"0")}/${String(y).slice(-2)}`;
+  }
   function colNum(col){let n=0;for(const c of col)n=n*26+c.charCodeAt(0)-64;return n}
   function parseRef(ref){const m=ref.match(/^([A-Z]+)(\d+)$/);return {col:m[1],row:+m[2]}}
   function getCell(doc,ref){
@@ -238,11 +242,11 @@
     Object.values(cols).forEach(pair=>clearRefs(doc,rangeRefs(pair,[rowStart,rowEnd])));
     const grouped={1:[],2:[],3:[],4:[],5:[],6:[]};
     aggregate(type).forEach(e=>{const dow=new Date(e.date+"T12:00:00").getDay();if(grouped[dow])grouped[dow].push(e)});
-    for(const dow of Object.keys(grouped)){grouped[dow].forEach((e,i)=>{if(rowStart+i<=rowEnd){setNumber(doc,cols[dow][0]+(rowStart+i),excelSerial(e.date));setNumber(doc,cols[dow][1]+(rowStart+i),e.hours)}})}
+    for(const dow of Object.keys(grouped)){grouped[dow].forEach((e,i)=>{if(rowStart+i<=rowEnd){setText(doc,cols[dow][0]+(rowStart+i),excelDateText(e.date));setNumber(doc,cols[dow][1]+(rowStart+i),e.hours)}})}
   }
   function writeVertical(doc,type,dateCol,valueCol,detailCol,rowStart,rowEnd,mode="hours"){
     const cols=[dateCol,valueCol].concat(detailCol?[detailCol]:[]);clearRefs(doc,rangeRefs(cols,[rowStart,rowEnd]));
-    aggregate(type).forEach((e,i)=>{const r=rowStart+i;if(r>rowEnd)return;setNumber(doc,dateCol+r,excelSerial(e.date));setNumber(doc,valueCol+r,mode==="amount"?e.amount:e.hours);if(detailCol&&e.details.length)setText(doc,detailCol+r,[...new Set(e.details)].join(", "))});
+    aggregate(type).forEach((e,i)=>{const r=rowStart+i;if(r>rowEnd)return;setText(doc,dateCol+r,excelDateText(e.date));setNumber(doc,valueCol+r,mode==="amount"?e.amount:e.hours);if(detailCol&&e.details.length)setText(doc,detailCol+r,[...new Set(e.details)].join(", "))});
   }
   function writePrivate(doc){
     clearRefs(doc,rangeRefs(["S","T","U"],[20,31]));
