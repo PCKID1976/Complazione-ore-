@@ -40,7 +40,7 @@
 <div class="app">
   <div class="top">
     <div class="title"><h1>Foglio Ore Canottaggio</h1><p>Segna le ore giorno per giorno. A fine mese genera il modello Excel già compilato.</p></div>
-    <div class="pill">Salvataggio automatico</div>
+    <div class="pill">Versione 2 · Salvataggio automatico</div>
   </div>
 
   <div class="panel toolbar">
@@ -262,6 +262,7 @@
       const xml=await zip.file("xl/worksheets/sheet1.xml").async("string");
       const doc=new DOMParser().parseFromString(xml,"application/xml");
       setText(doc,"B3",MONTHS[+monthSel.value]);
+      setText(doc,"A1",`ANNO ${yearSel.value}/${+yearSel.value+1}`);
       writeWeekCategory(doc,"base",7,11);
       writeWeekCategory(doc,"advanced",17,21);
       writeWeekCategory(doc,"agonismo",27,31);
@@ -272,7 +273,7 @@
       writeVertical(doc,"remo","P","Q","R",36,42);
       // Data di compilazione
       const today=new Date(), tIso=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
-      setNumber(doc,"B33",excelSerial(tIso));
+      setText(doc,"B33",excelDateText(tIso));
       zip.file("xl/worksheets/sheet1.xml",new XMLSerializer().serializeToString(doc));
       // forza il ricalcolo delle formule all'apertura
       const wbxml=await zip.file("xl/workbook.xml").async("string");
@@ -295,7 +296,9 @@
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Riepilogo ${MONTHS[+monthSel.value]} ${yearSel.value}</title><style>body{font-family:Arial;padding:30px;color:#111}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #bbb;padding:8px;text-align:left;font-size:12px}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>Foglio Ore Canottaggio — ${MONTHS[+monthSel.value]} ${yearSel.value}</h1><table><thead><tr><th>Data</th><th>Attività</th><th>Ore / Importo</th><th>Dettaglio</th></tr></thead><tbody>${rows.join("")||"<tr><td colspan=4>Nessun dato</td></tr>"}</tbody></table><p><button onclick="window.print()">Stampa / Salva come PDF</button></p></body></html>`);w.document.close();
   });
 
-  if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
+    }
   render();
 })();
 </script>
