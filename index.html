@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b5d3b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Foglio Ore Canottaggio</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root{--bg:#f4f7f5;--card:#fff;--text:#17211b;--muted:#69756d;--line:#dbe4de;--accent:#0b5d3b;--accent2:#e4f2ea;--danger:#a33737;--shadow:0 10px 30px rgba(19,42,29,.08)}
+    *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .app{max-width:1040px;margin:0 auto;padding:18px 14px 42px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .title h1{font-size:25px;margin:0}.title p{margin:5px 0 0;color:var(--muted);font-size:14px}
+    .pill{background:var(--accent2);color:var(--accent);padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+    .toolbar{padding:14px;display:grid;grid-template-columns:1fr 130px auto;gap:10px;align-items:end;margin-bottom:14px}
+    label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px}
+    select,input{width:100%;min-height:44px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:white;color:var(--text);font-size:16px}
+    button{min-height:44px;border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;cursor:pointer}
+    .primary{background:var(--accent);color:#fff}.secondary{background:#fff;border:1px solid var(--line);color:var(--text)}.danger{color:var(--danger);background:#fff;border:1px solid #efd2d2}
+    .calendar{overflow:hidden}.week{display:grid;grid-template-columns:repeat(7,1fr);background:#f8faf9;border-bottom:1px solid var(--line)}
+    .week div{text-align:center;padding:9px 2px;font-size:11px;font-weight:800;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(7,1fr)}.day{min-height:102px;padding:8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:white;text-align:left;border-radius:0;position:relative;font-weight:400}
+    .day:nth-child(7n){border-right:0}.day.other{background:#fafbfa;color:#a4aaa6}.day.sun{background:#fbfbfb}.num{font-weight:800;font-size:13px;margin-bottom:6px}.badge{font-size:10px;line-height:1.25;padding:4px 5px;margin:3px 0;border-radius:6px;background:#eef3f0;white-space:normal;overflow-wrap:anywhere}.badge strong{display:block;font-size:11px}
+    .day.has{background:#fbfefc}.day.selected{outline:3px solid rgba(11,93,59,.18);outline-offset:-3px}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.stat{padding:14px}.stat .k{font-size:12px;color:var(--muted);font-weight:700}.stat .v{font-size:24px;font-weight:900;margin-top:3px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.actions button{flex:1;min-width:160px}
+    dialog{width:min(560px,calc(100% - 22px));border:0;border-radius:18px;padding:0;box-shadow:0 20px 70px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(13,22,17,.45)}
+    .modal{padding:18px}.modal h2{margin:0 0 4px;font-size:20px}.modal .sub{color:var(--muted);font-size:13px;margin-bottom:16px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+    .entries{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.entry{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf1ee}.entry:last-child{border-bottom:0}.entry-main{min-width:0}.entry-main b{display:block;font-size:13px}.entry-main span{font-size:12px;color:var(--muted)}.entry button{min-height:34px;padding:5px 9px;font-size:12px}
+    .notice{margin-top:14px;padding:12px 14px;border-radius:12px;background:#fff7df;border:1px solid #eedb9f;color:#624f14;font-size:13px;display:none}.notice.show{display:block}
+    .toast{position:sticky;bottom:12px;margin:14px auto 0;max-width:680px;background:#17211b;color:white;padding:11px 14px;border-radius:12px;font-size:13px;display:none;z-index:20}.toast.show{display:block}
+    @media(max-width:700px){.app{padding:12px 8px 32px}.top{align-items:flex-start}.title h1{font-size:21px}.toolbar{grid-template-columns:1fr 110px}.toolbar button{grid-column:1/-1}.day{min-height:83px;padding:5px}.badge{font-size:9px;padding:3px}.badge strong{font-size:9px}.summary{grid-template-columns:1fr 1fr}.summary .stat:last-child{grid-column:1/-1}.formgrid{grid-template-columns:1fr}.full{grid-column:1}.week div{font-size:10px}.pill{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="title"><h1>Foglio Ore Canottaggio</h1><p>Segna le ore giorno per giorno. A fine mese genera il modello Excel già compilato.</p></div>
+    <div class="pill">Salvataggio automatico</div>
+  </div>
+
+  <div class="panel toolbar">
+    <div><label for="month">Mese</label><select id="month"></select></div>
+    <div><label for="year">Anno</label><select id="year"></select></div>
+    <button id="todayBtn" class="secondary" type="button">Vai a oggi</button>
+  </div>
+
+  <div class="panel calendar">
+    <div class="week"><div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div>SAB</div><div>DOM</div></div>
+    <div id="calendarGrid" class="grid"></div>
+  </div>
+
+  <div class="summary">
+    <div class="panel stat"><div class="k">Ore del mese</div><div id="hoursTotal" class="v">0</div></div>
+    <div class="panel stat"><div class="k">Giornate lavorate</div><div id="daysTotal" class="v">0</div></div>
+    <div class="panel stat"><div class="k">Attività inserite</div><div id="entriesTotal" class="v">0</div></div>
+  </div>
+
+  <div id="notice" class="notice"></div>
+
+  <div class="actions">
+    <button id="exportBtn" class="primary" type="button">Genera Excel compilato</button>
+    <button id="printBtn" class="secondary" type="button">Riepilogo / Stampa PDF</button>
+    <button id="clearMonthBtn" class="danger" type="button">Azzera mese</button>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+
+<dialog id="entryDialog">
+  <form id="entryForm" class="modal">
+    <h2 id="dialogTitle">Aggiungi attività</h2>
+    <div id="dialogSub" class="sub"></div>
+    <div class="formgrid">
+      <div class="full"><label for="activity">Attività</label>
+        <select id="activity">
+          <option value="base">Corsi Base</option>
+          <option value="advanced">Corsi Avanzati</option>
+          <option value="agonismo">Agonismo</option>
+          <option value="school">Canottaggio Scuole</option>
+          <option value="private">Lezione Privata</option>
+          <option value="sub_base">Sostituzione Corsi Base</option>
+          <option value="sub_advanced">Sostituzione Corsi Avanzati</option>
+          <option value="remo">Remo & Pagaia</option>
+        </select>
+      </div>
+      <div id="hoursWrap"><label for="hours">Ore</label><input id="hours" type="number" min="0.25" max="24" step="0.25" value="2" required></div>
+      <div id="amountWrap" style="display:none"><label for="amount">Importo €</label><input id="amount" type="number" min="0" step="0.01" placeholder="es. 35"></div>
+      <div id="detailWrap" class="full" style="display:none"><label id="detailLabel" for="detail">Dettaglio</label><input id="detail" type="text" maxlength="80"></div>
+    </div>
+    <div id="dayEntries" class="entries"></div>
+    <div class="modal-actions">
+      <button id="closeDialog" class="secondary" type="button">Chiudi</button>
+      <button class="primary" type="submit">Aggiungi</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(() => {
+  const MONTHS=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+  const LABELS={base:"Corsi Base",advanced:"Corsi Avanzati",agonismo:"Agonismo",school:"Canottaggio Scuole",private:"Lezione Privata",sub_base:"Sost. Base",sub_advanced:"Sost. Avanzati",remo:"Remo & Pagaia"};
+  const monthSel=document.getElementById("month"), yearSel=document.getElementById("year"), grid=document.getElementById("calendarGrid");
+  const dlg=document.getElementById("entryDialog"), form=document.getElementById("entryForm"), act=document.getElementById("activity");
+  const hours=document.getElementById("hours"), amount=document.getElementById("amount"), detail=document.getElementById("detail");
+  const detailWrap=document.getElementById("detailWrap"), detailLabel=document.getElementById("detailLabel"), amountWrap=document.getElementById("amountWrap"), hoursWrap=document.getElementById("hoursWrap");
+  const toast=document.getElementById("toast"), notice=document.getElementById("notice");
+  let selectedDate=null;
+  let state=loadState();
+
+  MONTHS.forEach((m,i)=>monthSel.add(new Option(m,i)));
+  for(let y=2025;y<=2032;y++) yearSel.add(new Option(y,y));
+  const now=new Date();
+  monthSel.value=String(now.getMonth()); yearSel.value=String(now.getFullYear());
+
+  function key(){return `${yearSel.value}-${String(+monthSel.value+1).padStart(2,"0")}`}
+  function iso(y,m,d){return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+  function loadState(){try{return JSON.parse(localStorage.getItem("rowing-hours-v1")||"{}")}catch{return {}}}
+  function save(){localStorage.setItem("rowing-hours-v1",JSON.stringify(state))}
+  function monthData(){return state[key()]||{}}
+  function ensureMonth(){if(!state[key()])state[key()]={};return state[key()]}
+
+  function showToast(msg){toast.textContent=msg;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2600)}
+  function render(){
+    const y=+yearSel.value,m=+monthSel.value, first=new Date(y,m,1), days=new Date(y,m+1,0).getDate();
+    const start=(first.getDay()+6)%7;
+    grid.innerHTML="";
+    for(let i=0;i<start;i++){const x=document.createElement("div");x.className="day other";grid.appendChild(x)}
+    const data=monthData();
+    for(let d=1;d<=days;d++){
+      const date=iso(y,m,d), dow=new Date(y,m,d).getDay(), es=data[date]||[];
+      const b=document.createElement("button"); b.type="button"; b.className="day"+(es.length?" has":"")+(dow===0?" sun":"");
+      b.setAttribute("aria-label",`${d} ${MONTHS[m]}, ${es.length} attività`);
+      b.innerHTML=`<div class="num">${d}</div>`+es.slice(0,3).map(e=>`<div class="badge"><strong>${esc(LABELS[e.type])}</strong>${e.type==="private"?(e.amount?fmtEuro(e.amount):"1 lezione"):(fmtNum(e.hours)+" h")}</div>`).join("")+(es.length>3?`<div class="badge">+${es.length-3} altre</div>`:"");
+      b.addEventListener("click",()=>openDay(date));
+      grid.appendChild(b);
+    }
+    const entries=Object.values(data).flat();
+    const hrs=entries.filter(e=>e.type!=="private").reduce((s,e)=>s+(+e.hours||0),0);
+    document.getElementById("hoursTotal").textContent=fmtNum(hrs);
+    document.getElementById("daysTotal").textContent=Object.values(data).filter(a=>a.length).length;
+    document.getElementById("entriesTotal").textContent=entries.length;
+    validateCapacity();
+  }
+
+  function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function fmtNum(n){return Number.isInteger(+n)?String(+n):String(+n).replace(".",",")}
+  function fmtEuro(n){return new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(+n||0)}
+
+  function openDay(date){
+    selectedDate=date;
+    const dt=new Date(date+"T12:00:00");
+    document.getElementById("dialogSub").textContent=new Intl.DateTimeFormat("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(dt);
+    act.value="base";hours.value="2";amount.value="";detail.value="";updateFields();renderDayEntries();dlg.showModal();
+  }
+  function renderDayEntries(){
+    const es=(monthData()[selectedDate]||[]);
+    const box=document.getElementById("dayEntries");
+    if(!es.length){box.innerHTML='<div style="font-size:13px;color:#69756d">Nessuna attività ancora inserita in questo giorno.</div>';return}
+    box.innerHTML=es.map((e,i)=>`<div class="entry"><div class="entry-main"><b>${esc(LABELS[e.type])}</b><span>${e.type==="private"?(e.amount?fmtEuro(e.amount):"1 lezione"):fmtNum(e.hours)+" ore"}${e.detail?" · "+esc(e.detail):""}</span></div><button type="button" class="danger" data-del="${i}">Elimina</button></div>`).join("");
+    box.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",()=>{ensureMonth()[selectedDate].splice(+btn.dataset.del,1);if(!ensureMonth()[selectedDate].length)delete ensureMonth()[selectedDate];save();renderDayEntries();render()}));
+  }
+  function updateFields(){
+    const t=act.value;
+    const isPrivate=t==="private";
+    hoursWrap.style.display=isPrivate?"none":"block";
+    amountWrap.style.display=isPrivate?"block":"none";
+    const needDetail=["school","private","sub_base","sub_advanced","remo"].includes(t);
+    detailWrap.style.display=needDetail?"block":"none";
+    if(t==="school"||t==="remo"){detailLabel.textContent="Scuola";detail.placeholder="Nome scuola"}
+    else if(t==="private"){detailLabel.textContent="Corsista";detail.placeholder="Nome corsista"}
+    else if(t.startsWith("sub_")){detailLabel.textContent="Istruttore sostituito";detail.placeholder="Nome istruttore"}
+  }
+  act.addEventListener("change",updateFields);
+  form.addEventListener("submit",e=>{
+    e.preventDefault();
+    const t=act.value;
+    const obj={type:t};
+    if(t==="private"){obj.amount=Math.max(0,+amount.value||0);obj.count=1}
+    else {const h=+hours.value;if(!Number.isFinite(h)||h<=0){showToast("Inserisci un numero di ore valido");return}obj.hours=h}
+    if(detailWrap.style.display!=="none"&&detail.value.trim())obj.detail=detail.value.trim();
+    const md=ensureMonth(); if(!md[selectedDate])md[selectedDate]=[]; md[selectedDate].push(obj);
+    save(); renderDayEntries(); render(); showToast("Attività aggiunta");
+  });
+  document.getElementById("closeDialog").addEventListener("click",()=>dlg.close());
+  monthSel.addEventListener("change",render); yearSel.addEventListener("change",render);
+  document.getElementById("todayBtn").addEventListener("click",()=>{const n=new Date();monthSel.value=n.getMonth();yearSel.value=n.getFullYear();render()});
+  document.getElementById("clearMonthBtn").addEventListener("click",()=>{if(confirm(`Cancellare tutti i dati di ${MONTHS[+monthSel.value]} ${yearSel.value}?`)){delete state[key()];save();render();showToast("Mese azzerato")}});
+
+  function aggregate(type){
+    const out={};
+    Object.entries(monthData()).forEach(([date,es])=>es.filter(e=>e.type===type).forEach(e=>{
+      if(!out[date])out[date]={date,hours:0,amount:0,count:0,details:[]};
+      out[date].hours+=+e.hours||0; out[date].amount+=+e.amount||0; out[date].count+=e.count||1;
+      if(e.detail)out[date].details.push(e.detail);
+    }));
+    return Object.values(out).sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  function validateCapacity(){
+    const problems=[];
+    [["base",5],["advanced",5],["agonismo",5]].forEach(([t,cap])=>{
+      const groups={}; aggregate(t).forEach(e=>{const dow=new Date(e.date+"T12:00:00").getDay();if(dow>0&&dow<7)groups[dow]=(groups[dow]||0)+1});
+      Object.entries(groups).forEach(([dow,n])=>{if(n>cap)problems.push(`${LABELS[t]}: troppi giorni nello stesso giorno della settimana`)});
+    });
+    [["school",10],["private",12],["sub_base",5],["sub_advanced",7],["remo",7]].forEach(([t,cap])=>{if(aggregate(t).length>cap)problems.push(`${LABELS[t]} supera i ${cap} spazi disponibili nel modello`)});
+    const sundays=Object.entries(monthData()).filter(([d,es])=>new Date(d+"T12:00:00").getDay()===0 && es.some(e=>["base","advanced","agonismo"].includes(e.type)));
+    if(sundays.length)problems.push("Il modello Excel non ha una colonna Domenica per Base/Avanzati/Agonismo.");
+    notice.textContent=problems.join(" • ");notice.classList.toggle("show",!!problems.length);return problems;
+  }
+
+  function excelSerial(dateStr){
+    const [y,m,d]=dateStr.split("-").map(Number);
+    return Math.floor((Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/86400000);
+  }
+  function colNum(col){let n=0;for(const c of col)n=n*26+c.charCodeAt(0)-64;return n}
+  function parseRef(ref){const m=ref.match(/^([A-Z]+)(\d+)$/);return {col:m[1],row:+m[2]}}
+  function getCell(doc,ref){
+    let cell=doc.querySelector(`c[r="${ref}"]`);
+    if(cell)return cell;
+    const {col,row}=parseRef(ref); let r=doc.querySelector(`row[r="${row}"]`);
+    if(!r){r=doc.createElementNS(doc.documentElement.namespaceURI,"row");r.setAttribute("r",row);const sd=doc.querySelector("sheetData");const next=[...sd.children].find(x=>+x.getAttribute("r")>row);next?sd.insertBefore(r,next):sd.appendChild(r)}
+    cell=doc.createElementNS(doc.documentElement.namespaceURI,"c");cell.setAttribute("r",ref);
+    const next=[...r.querySelectorAll(":scope > c")].find(x=>colNum(parseRef(x.getAttribute("r")).col)>colNum(col));next?r.insertBefore(cell,next):r.appendChild(cell);return cell;
+  }
+  function clearValue(cell){[...cell.querySelectorAll(":scope > v,:scope > is")].forEach(n=>n.remove());cell.removeAttribute("t")}
+  function setNumber(doc,ref,val){const c=getCell(doc,ref);clearValue(c);const v=doc.createElementNS(doc.documentElement.namespaceURI,"v");v.textContent=String(val);c.appendChild(v)}
+  function setText(doc,ref,val){const c=getCell(doc,ref);clearValue(c);c.setAttribute("t","inlineStr");const is=doc.createElementNS(doc.documentElement.namespaceURI,"is"),t=doc.createElementNS(doc.documentElement.namespaceURI,"t");t.textContent=String(val);is.appendChild(t);c.appendChild(is)}
+  function blank(doc,ref){clearValue(getCell(doc,ref))}
+  function clearRefs(doc,refs){refs.forEach(r=>blank(doc,r))}
+  function rangeRefs(cols,rows){const a=[];for(let r=rows[0];r<=rows[1];r++)cols.forEach(c=>a.push(c+r));return a}
+
+  function writeWeekCategory(doc,type,rowStart,rowEnd){
+    const cols={1:["F","G"],2:["H","I"],3:["J","K"],4:["L","M"],5:["N","O"],6:["P","Q"]};
+    Object.values(cols).forEach(pair=>clearRefs(doc,rangeRefs(pair,[rowStart,rowEnd])));
+    const grouped={1:[],2:[],3:[],4:[],5:[],6:[]};
+    aggregate(type).forEach(e=>{const dow=new Date(e.date+"T12:00:00").getDay();if(grouped[dow])grouped[dow].push(e)});
+    for(const dow of Object.keys(grouped)){grouped[dow].forEach((e,i)=>{if(rowStart+i<=rowEnd){setNumber(doc,cols[dow][0]+(rowStart+i),excelSerial(e.date));setNumber(doc,cols[dow][1]+(rowStart+i),e.hours)}})}
+  }
+  function writeVertical(doc,type,dateCol,valueCol,detailCol,rowStart,rowEnd,mode="hours"){
+    const cols=[dateCol,valueCol].concat(detailCol?[detailCol]:[]);clearRefs(doc,rangeRefs(cols,[rowStart,rowEnd]));
+    aggregate(type).forEach((e,i)=>{const r=rowStart+i;if(r>rowEnd)return;setNumber(doc,dateCol+r,excelSerial(e.date));setNumber(doc,valueCol+r,mode==="amount"?e.amount:e.hours);if(detailCol&&e.details.length)setText(doc,detailCol+r,[...new Set(e.details)].join(", "))});
+  }
+  function writePrivate(doc){
+    clearRefs(doc,rangeRefs(["S","T","U"],[20,31]));
+    aggregate("private").forEach((e,i)=>{const r=20+i;if(r>31)return;setNumber(doc,"S"+r,e.count);setNumber(doc,"T"+r,e.amount);if(e.details.length)setText(doc,"U"+r,[...new Set(e.details)].join(", "))});
+  }
+
+  async function exportExcel(){
+    if(validateCapacity().length){showToast("Controlla l'avviso prima di generare il file");return}
+    if(typeof JSZip==="undefined"){showToast("Libreria Excel non caricata. Controlla la connessione.");return}
+    try{
+      const resp=await fetch("Foglio_ore_template.xlsx");if(!resp.ok)throw new Error("template");
+      const zip=await JSZip.loadAsync(await resp.arrayBuffer());
+      const xml=await zip.file("xl/worksheets/sheet1.xml").async("string");
+      const doc=new DOMParser().parseFromString(xml,"application/xml");
+      setText(doc,"B3",MONTHS[+monthSel.value]);
+      writeWeekCategory(doc,"base",7,11);
+      writeWeekCategory(doc,"advanced",17,21);
+      writeWeekCategory(doc,"agonismo",27,31);
+      writeVertical(doc,"school","S","T","U",6,15);
+      writePrivate(doc);
+      writeVertical(doc,"sub_base","F","G","H",36,40);
+      writeVertical(doc,"sub_advanced","K","L","M",36,42);
+      writeVertical(doc,"remo","P","Q","R",36,42);
+      // Data di compilazione
+      const today=new Date(), tIso=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+      setNumber(doc,"B33",excelSerial(tIso));
+      zip.file("xl/worksheets/sheet1.xml",new XMLSerializer().serializeToString(doc));
+      // forza il ricalcolo delle formule all'apertura
+      const wbxml=await zip.file("xl/workbook.xml").async("string");
+      const wdoc=new DOMParser().parseFromString(wbxml,"application/xml");
+      let calc=wdoc.querySelector("calcPr");
+      if(!calc){calc=wdoc.createElementNS(wdoc.documentElement.namespaceURI,"calcPr");wdoc.documentElement.appendChild(calc)}
+      calc.setAttribute("fullCalcOnLoad","1");calc.setAttribute("forceFullCalc","1");calc.setAttribute("calcMode","auto");
+      zip.file("xl/workbook.xml",new XMLSerializer().serializeToString(wdoc));
+      const blob=await zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`Foglio ore Canottaggio_${MONTHS[+monthSel.value]}_${yearSel.value}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      showToast("Excel generato");
+    }catch(err){console.error(err);showToast("Errore nella generazione. Apri la web app da GitHub Pages, non come file locale.")}
+  }
+  document.getElementById("exportBtn").addEventListener("click",exportExcel);
+
+  document.getElementById("printBtn").addEventListener("click",()=>{
+    const data=monthData(), rows=[];
+    Object.keys(data).sort().forEach(d=>data[d].forEach(e=>rows.push(`<tr><td>${new Date(d+"T12:00:00").toLocaleDateString("it-IT")}</td><td>${esc(LABELS[e.type])}</td><td>${e.type==="private"?(e.amount?fmtEuro(e.amount):"1 lezione"):fmtNum(e.hours)+" h"}</td><td>${esc(e.detail||"")}</td></tr>`)));
+    const w=window.open("","_blank"); if(!w){showToast("Consenti i popup per creare il PDF");return}
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Riepilogo ${MONTHS[+monthSel.value]} ${yearSel.value}</title><style>body{font-family:Arial;padding:30px;color:#111}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #bbb;padding:8px;text-align:left;font-size:12px}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>Foglio Ore Canottaggio — ${MONTHS[+monthSel.value]} ${yearSel.value}</h1><table><thead><tr><th>Data</th><th>Attività</th><th>Ore / Importo</th><th>Dettaglio</th></tr></thead><tbody>${rows.join("")||"<tr><td colspan=4>Nessun dato</td></tr>"}</tbody></table><p><button onclick="window.print()">Stampa / Salva come PDF</button></p></body></html>`);w.document.close();
+  });
+
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  render();
+})();
+</script>
+</body>
+</html>
