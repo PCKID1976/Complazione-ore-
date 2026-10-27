@@ -1,4 +1,4 @@
-const CACHE="foglio-ore-v6";
+const CACHE="foglio-ore-v7";
 const CORE=["./","./index.html","./manifest.webmanifest","./Foglio_ore_template.xlsx","./Foglio_ore_template_bg.png","./firma_nicolo.png"];
 
 self.addEventListener("install",event=>{
