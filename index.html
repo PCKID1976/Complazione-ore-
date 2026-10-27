@@ -374,6 +374,13 @@
       const gross=vals.reduce((a,v)=>a+(+v[2]||0),0); txt(euro(gross),330,694,6,"center",true); // netto (ritenute lasciate come nel modello)
       const today=new Date(); txt(`${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`,174,742,5.8);
 
+      // Firma Nicolò Ciapparelli: stessa immagine utilizzata nel modello Excel.
+      const sigResp=await fetch("firma_nicolo.png");
+      if(!sigResp.ok) throw new Error("firma");
+      const sigBlob=await sigResp.blob();
+      const sigData=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(sigBlob)});
+      pdf.addImage(sigData,"PNG",X(132),Y(760),X(245),Y(92));
+
       pdf.save(`Foglio ore Canottaggio_${MONTHS[m]}_${y}.pdf`);
       showToast("PDF del foglio Excel generato");
     }catch(err){console.error(err);showToast("Errore nella generazione del PDF")}

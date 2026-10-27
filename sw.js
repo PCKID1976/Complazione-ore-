@@ -1,5 +1,5 @@
-const CACHE="foglio-ore-v5";
-const CORE=["./","./index.html","./manifest.webmanifest","./Foglio_ore_template.xlsx","./Foglio_ore_template_bg.png"];
+const CACHE="foglio-ore-v6";
+const CORE=["./","./index.html","./manifest.webmanifest","./Foglio_ore_template.xlsx","./Foglio_ore_template_bg.png","./firma_nicolo.png"];
 
 self.addEventListener("install",event=>{
   self.skipWaiting();
@@ -16,7 +16,7 @@ self.addEventListener("activate",event=>{
 
 self.addEventListener("fetch",event=>{
   const req=event.request;
-  if(req.mode==="navigate" || req.url.endsWith("/index.html") || (req.url.includes("Foglio_ore_template.xlsx") || req.url.includes("Foglio_ore_template_bg.png"))){
+  if(req.mode==="navigate" || req.url.endsWith("/index.html") || (req.url.includes("Foglio_ore_template.xlsx") || req.url.includes("Foglio_ore_template_bg.png") || req.url.includes("firma_nicolo.png"))){
     event.respondWith(
       fetch(req,{cache:"no-store"})
         .then(resp=>{
