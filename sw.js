@@ -1,5 +1,5 @@
-const CACHE="foglio-ore-v4";
-const CORE=["./","./index.html","./manifest.webmanifest","./Foglio_ore_template.xlsx"];
+const CACHE="foglio-ore-v5";
+const CORE=["./","./index.html","./manifest.webmanifest","./Foglio_ore_template.xlsx","./Foglio_ore_template_bg.png"];
 
 self.addEventListener("install",event=>{
   self.skipWaiting();
@@ -16,7 +16,7 @@ self.addEventListener("activate",event=>{
 
 self.addEventListener("fetch",event=>{
   const req=event.request;
-  if(req.mode==="navigate" || req.url.endsWith("/index.html") || req.url.includes("Foglio_ore_template.xlsx")){
+  if(req.mode==="navigate" || req.url.endsWith("/index.html") || (req.url.includes("Foglio_ore_template.xlsx") || req.url.includes("Foglio_ore_template_bg.png"))){
     event.respondWith(
       fetch(req,{cache:"no-store"})
         .then(resp=>{

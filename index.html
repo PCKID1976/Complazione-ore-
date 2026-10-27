@@ -291,64 +291,91 @@
   }
   document.getElementById("exportBtn").addEventListener("click",exportExcel);
 
-  document.getElementById("printBtn").addEventListener("click",()=>{
+  document.getElementById("printBtn").addEventListener("click",async()=>{
     if(validateCapacity().length){showToast("Controlla l'avviso prima di generare il file");return}
     if(!window.jspdf || !window.jspdf.jsPDF){showToast("Libreria PDF non caricata. Controlla la connessione.");return}
     try{
       const {jsPDF}=window.jspdf;
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
-      const y=+yearSel.value,m=+monthSel.value;
+      const bg=await fetch("Foglio_ore_template_bg.png");
+      if(!bg.ok) throw new Error("sfondo modello");
+      const bgBlob=await bg.blob();
+      const bgData=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(bgBlob)});
+      pdf.addImage(bgData,"PNG",0,0,297,210);
+
+      // Coordinate ricavate direttamente dal modello Excel A4 orizzontale.
+      const X=p=>p*297/1448, Y=p=>p*210/1024;
+      const white=(x,y,w,h)=>{pdf.setFillColor(255,255,255);pdf.rect(X(x),Y(y),X(w),Y(h),"F")};
+      const txt=(t,x,y,size=6,align="center",bold=false)=>{pdf.setTextColor(0,0,0);pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(size);pdf.text(String(t??""),X(x),Y(y),{align})};
+      const n=v=>{const z=Number(v)||0;return z.toFixed(2)};
+      const euro=v=>n(v);
+      const m=+monthSel.value, y=+yearSel.value;
+
+      // Intestazione variabile
+      white(18,150,365,64); txt(`ANNO ${y}/${y+1}`,22,170,7,"left",true);
+      white(120,184,265,34); txt(MONTHS[m],126,207,8,"left");
+
+      // Pulisce le celle variabili del modello senza toccare griglie e intestazioni.
+      function cleanGrid(x0,y0,colW,rowYs,cols){rowYs.forEach(cy=>{for(let c=0;c<cols;c++)white(x0+c*colW+3,cy-12,colW-6,18)})}
+      const weekX=427, weekW=(1188-427)/12;
+      const baseRows=[286,304,322,340,350], advRows=[462,480,498,516,534], agoRows=[645,663,681,699,707];
+      cleanGrid(weekX,274,weekW,baseRows,12); cleanGrid(weekX,450,weekW,advRows,12); cleanGrid(weekX,633,weekW,agoRows,12);
+      // Totali giornalieri in fondo alle tre tabelle
+      [365,550,723].forEach(py=>{for(let d=0;d<6;d++)white(493+d*126.8,py-12,56,17)});
+      // Tabelle verticali e riepilogo
+      for(const py of [255,273,291,309,327,345,363,381,399,417,435]) white(1220,py-12,197,18);
+      for(const py of [515,533,551,569,587,605,623,641,659,677,695]) white(1220,py-12,197,18);
+      for(const py of [790,808,826,844,862,880]) {white(429,py-12,246,18);white(739,py-12,253,18);white(1059,py-12,220,18)}
+      for(const py of [470,488,506,524,542,560,578,596,614]) white(126,py-12,258,18);
+      white(278,636,105,80); white(142,728,100,24);
+
+      function putWeek(type,rowCenters){
+        const byDow={1:[],2:[],3:[],4:[],5:[],6:[]};
+        aggregate(type).forEach(e=>{const d=new Date(e.date+"T12:00:00").getDay();if(byDow[d])byDow[d].push(e)});
+        for(let d=1;d<=6;d++) byDow[d].forEach((e,i)=>{if(i>=rowCenters.length)return;const base=(d-1)*2;txt(excelDateText(e.date),weekX+(base+.5)*weekW,rowCenters[i],6);txt(n(e.hours),weekX+(base+1.5)*weekW,rowCenters[i],6)});
+      }
+      putWeek("base",baseRows); putWeek("advanced",advRows); putWeek("agonismo",agoRows);
+
+      // Totali per giorno
+      function dayTotals(type,py){for(let d=1;d<=6;d++){let v=0;aggregate(type).forEach(e=>{if(new Date(e.date+"T12:00:00").getDay()===d)v+=+e.hours||0});txt(n(v),520+(d-1)*126.8,py,6)}}
+      dayTotals("base",365);dayTotals("advanced",550);dayTotals("agonismo",723);
+
+      // Canottaggio scuole
+      aggregate("school").forEach((e,i)=>{if(i>10)return;const py=255+i*18;txt(excelDateText(e.date),1249,py,5.5);txt(n(e.hours),1310,py,5.5);txt([...new Set(e.details)].join(", "),1377,py,5.2)});
+      txt(n(aggregate("school").reduce((a,e)=>a+(+e.hours||0),0)),1330,447,6);
+      // Lezioni private
+      aggregate("private").forEach((e,i)=>{if(i>10)return;const py=515+i*18;txt(e.count||1,1248,py,5.5);txt(euro(e.amount||0),1310,py,5.5);txt([...new Set(e.details)].join(", "),1378,py,5.2)});
+      txt(euro(aggregate("private").reduce((a,e)=>a+(+e.amount||0),0)),1330,723,6);
+
+      function putVertical(type,xDate,xVal,xDet,rows,mode="hours"){
+        aggregate(type).forEach((e,i)=>{if(i>=rows.length)return;txt(excelDateText(e.date),xDate,rows[i],5.5);txt(mode==="amount"?euro(e.amount):n(e.hours),xVal,rows[i],5.5);txt([...new Set(e.details)].join(", "),xDet,rows[i],5.1)});
+      }
+      const bottom=[790,808,826,844,862,880];
+      putVertical("sub_base",458,535,615,bottom); putVertical("sub_advanced",770,846,925,bottom); putVertical("remo",1090,1165,1235,bottom);
+      txt(n(aggregate("sub_base").reduce((a,e)=>a+(+e.hours||0),0)),535,901,6);
+      txt(n(aggregate("sub_advanced").reduce((a,e)=>a+(+e.hours||0),0)),846,901,6);
+      txt(n(aggregate("remo").reduce((a,e)=>a+(+e.hours||0),0)),1165,901,6);
+
+      // Riepilogo economico identico al modello Excel
+      const hoursOf=t=>aggregate(t).reduce((a,e)=>a+(+e.hours||0),0);
       const rates={base:14,advanced:0,remo:14,school:14,agonismo:14};
-      const sums={}; Object.keys(LABELS).forEach(t=>sums[t]=aggregate(t));
-      const totalHours=t=>sums[t].reduce((a,e)=>a+(+e.hours||0),0);
-      const privateTotal=sums.private.reduce((a,e)=>a+(+e.amount||0),0);
-      const money={
-        base:(totalHours("base")+totalHours("sub_base"))*rates.base,
-        advanced:(totalHours("advanced")+totalHours("sub_advanced"))*rates.advanced,
-        remo:totalHours("remo")*rates.remo,
-        school:totalHours("school")*rates.school,
-        agonismo:totalHours("agonismo")*rates.agonismo,
-        private:privateTotal
-      };
-      const grand=Object.values(money).reduce((a,b)=>a+b,0);
-      pdf.setFont("helvetica","bold"); pdf.setFontSize(15);
-      pdf.text(`FOGLIO ORE CANOTTAGGIO — ${MONTHS[m].toUpperCase()} ${y}`,12,12);
-      pdf.setFontSize(9); pdf.setFont("helvetica","normal");
-      pdf.text(`ANNO ${y}/${y+1}   |   SETTORE: CANOTTAGGIO`,12,18);
-      pdf.text("Cognome e Nome: Ciapparelli Matteo",12,23);
-      pdf.text("Indirizzo: Via Alberto Mario 47   |   Tel. 3456521212   |   Data di nascita: 25/01/1976",12,28);
-      pdf.text("Codice Fiscale: CPPMTT76A25D612B",12,33);
-
-      const summaryBody=[
-        ["Corsi Base",fmtNum(totalHours("base")),"14,00",fmtEuro(money.base)],
-        ["Sost. Base",fmtNum(totalHours("sub_base")),"—","incluso nei Corsi Base"],
-        ["Corsi Avanzati",fmtNum(totalHours("advanced")),"0,00",fmtEuro(money.advanced)],
-        ["Sost. Avanzati",fmtNum(totalHours("sub_advanced")),"—","incluso nei Corsi Avanzati"],
-        ["Remo & Pagaia",fmtNum(totalHours("remo")),"14,00",fmtEuro(money.remo)],
-        ["Lezioni Private",String(sums.private.reduce((a,e)=>a+(e.count||1),0)),"—",fmtEuro(money.private)],
-        ["Canottaggio Scuole",fmtNum(totalHours("school")),"14,00",fmtEuro(money.school)],
-        ["Agonismo",fmtNum(totalHours("agonismo")),"14,00",fmtEuro(money.agonismo)]
+      const vals=[
+        [hoursOf("base"),14,hoursOf("base")*14],
+        [hoursOf("sub_base"),"",0],
+        [hoursOf("advanced"),0,hoursOf("advanced")*0],
+        [hoursOf("sub_advanced"),"",0],
+        [hoursOf("remo"),14,hoursOf("remo")*14],
+        [aggregate("private").reduce((a,e)=>a+(e.count||1),0),"",aggregate("private").reduce((a,e)=>a+(+e.amount||0),0)],
+        [hoursOf("school"),14,hoursOf("school")*14],
+        [hoursOf("agonismo"),14,hoursOf("agonismo")*14]
       ];
-      pdf.autoTable({startY:38,margin:{left:12,right:155},head:[["Specifica","N° ore","Euro/H","Totale Attività"]],body:summaryBody,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[230,230,230],textColor:20},theme:"grid"});
-      const sy=pdf.lastAutoTable.finalY+3;
-      pdf.setFont("helvetica","bold");pdf.setFontSize(9);pdf.text(`TOTALE LORDO: ${fmtEuro(grand)}`,12,sy+4);
-      pdf.text(`NETTO DA PAGARE: ${fmtEuro(grand)}`,12,sy+9);
+      const sumYs=[470,488,506,524,542,560,578,596];
+      vals.forEach((v,i)=>{txt(n(v[0]),164,sumYs[i],5.8);if(v[1]!=="")txt(n(v[1]),241,sumYs[i],5.8);txt(euro(v[2]),331,sumYs[i],5.8)});
+      const gross=vals.reduce((a,v)=>a+(+v[2]||0),0); txt(euro(gross),330,694,6,"center",true); // netto (ritenute lasciate come nel modello)
+      const today=new Date(); txt(`${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`,174,742,5.8);
 
-      const all=[];
-      Object.entries(monthData()).sort().forEach(([date,es])=>es.forEach(e=>all.push([
-        excelDateText(date), LABELS[e.type], e.type==="private"?(e.count||1):fmtNum(e.hours),
-        e.type==="private"?fmtEuro(e.amount||0):(rates[e.type]!==undefined?fmtEuro((+e.hours||0)*rates[e.type]):""), e.detail||""
-      ])));
-      pdf.autoTable({startY:38,margin:{left:148,right:10},head:[["Data","Attività","Ore/N.","Importo","Dettaglio"]],body:all.length?all:[["—","Nessuna attività","—","—",""]],styles:{fontSize:7,cellPadding:1.4},headStyles:{fillColor:[230,230,230],textColor:20},theme:"grid",columnStyles:{0:{cellWidth:20},1:{cellWidth:32},2:{cellWidth:15},3:{cellWidth:20},4:{cellWidth:45}}});
-
-      const pageH=pdf.internal.pageSize.getHeight();
-      pdf.setFont("helvetica","normal");pdf.setFontSize(8);
-      pdf.text(`Data: ${new Date().toLocaleDateString("it-IT")}`,12,pageH-14);
-      pdf.text("Firma:",12,pageH-8);
-      // La firma di Nicolò è incorporata nel modello Excel; nel PDF viene riportato il nominativo.
-      pdf.setFont("helvetica","italic");pdf.setFontSize(11);pdf.text("Nicolò Ciapparelli",28,pageH-8);
       pdf.save(`Foglio ore Canottaggio_${MONTHS[m]}_${y}.pdf`);
-      showToast("PDF compilato generato");
+      showToast("PDF del foglio Excel generato");
     }catch(err){console.error(err);showToast("Errore nella generazione del PDF")}
   });
 
