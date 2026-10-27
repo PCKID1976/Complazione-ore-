@@ -64,7 +64,7 @@
 
   <div class="actions">
     <button id="exportBtn" class="primary" type="button">Genera Excel compilato</button>
-    <button id="printBtn" class="secondary" type="button">Scarica PDF compilato</button>
+    <button id="printBtn" class="secondary" type="button">Scarica PDF (foglio ore)</button>
     <button id="clearMonthBtn" class="danger" type="button">Azzera mese</button>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -382,7 +382,7 @@
       pdf.addImage(sigData,"PNG",X(132),Y(760),X(245),Y(92));
 
       pdf.save(`Foglio ore Canottaggio_${MONTHS[m]}_${y}.pdf`);
-      showToast("PDF del foglio Excel generato");
+      showToast("PDF identico al foglio ore generato");
     }catch(err){console.error(err);showToast("Errore nella generazione del PDF")}
   });
 
