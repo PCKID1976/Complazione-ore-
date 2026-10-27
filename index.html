@@ -64,7 +64,7 @@
 
   <div class="actions">
     <button id="exportBtn" class="primary" type="button">Genera Excel compilato</button>
-    <button id="printBtn" class="secondary" type="button">Riepilogo / Stampa PDF</button>
+    <button id="printBtn" class="secondary" type="button">Scarica PDF compilato</button>
     <button id="clearMonthBtn" class="danger" type="button">Azzera mese</button>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -100,6 +100,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
 (() => {
   const MONTHS=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
@@ -290,10 +292,64 @@
   document.getElementById("exportBtn").addEventListener("click",exportExcel);
 
   document.getElementById("printBtn").addEventListener("click",()=>{
-    const data=monthData(), rows=[];
-    Object.keys(data).sort().forEach(d=>data[d].forEach(e=>rows.push(`<tr><td>${new Date(d+"T12:00:00").toLocaleDateString("it-IT")}</td><td>${esc(LABELS[e.type])}</td><td>${e.type==="private"?(e.amount?fmtEuro(e.amount):"1 lezione"):fmtNum(e.hours)+" h"}</td><td>${esc(e.detail||"")}</td></tr>`)));
-    const w=window.open("","_blank"); if(!w){showToast("Consenti i popup per creare il PDF");return}
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Riepilogo ${MONTHS[+monthSel.value]} ${yearSel.value}</title><style>body{font-family:Arial;padding:30px;color:#111}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #bbb;padding:8px;text-align:left;font-size:12px}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>Foglio Ore Canottaggio — ${MONTHS[+monthSel.value]} ${yearSel.value}</h1><table><thead><tr><th>Data</th><th>Attività</th><th>Ore / Importo</th><th>Dettaglio</th></tr></thead><tbody>${rows.join("")||"<tr><td colspan=4>Nessun dato</td></tr>"}</tbody></table><p><button onclick="window.print()">Stampa / Salva come PDF</button></p></body></html>`);w.document.close();
+    if(validateCapacity().length){showToast("Controlla l'avviso prima di generare il file");return}
+    if(!window.jspdf || !window.jspdf.jsPDF){showToast("Libreria PDF non caricata. Controlla la connessione.");return}
+    try{
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+      const y=+yearSel.value,m=+monthSel.value;
+      const rates={base:14,advanced:0,remo:14,school:14,agonismo:14};
+      const sums={}; Object.keys(LABELS).forEach(t=>sums[t]=aggregate(t));
+      const totalHours=t=>sums[t].reduce((a,e)=>a+(+e.hours||0),0);
+      const privateTotal=sums.private.reduce((a,e)=>a+(+e.amount||0),0);
+      const money={
+        base:(totalHours("base")+totalHours("sub_base"))*rates.base,
+        advanced:(totalHours("advanced")+totalHours("sub_advanced"))*rates.advanced,
+        remo:totalHours("remo")*rates.remo,
+        school:totalHours("school")*rates.school,
+        agonismo:totalHours("agonismo")*rates.agonismo,
+        private:privateTotal
+      };
+      const grand=Object.values(money).reduce((a,b)=>a+b,0);
+      pdf.setFont("helvetica","bold"); pdf.setFontSize(15);
+      pdf.text(`FOGLIO ORE CANOTTAGGIO — ${MONTHS[m].toUpperCase()} ${y}`,12,12);
+      pdf.setFontSize(9); pdf.setFont("helvetica","normal");
+      pdf.text(`ANNO ${y}/${y+1}   |   SETTORE: CANOTTAGGIO`,12,18);
+      pdf.text("Cognome e Nome: Ciapparelli Matteo",12,23);
+      pdf.text("Indirizzo: Via Alberto Mario 47   |   Tel. 3456521212   |   Data di nascita: 25/01/1976",12,28);
+      pdf.text("Codice Fiscale: CPPMTT76A25D612B",12,33);
+
+      const summaryBody=[
+        ["Corsi Base",fmtNum(totalHours("base")),"14,00",fmtEuro(money.base)],
+        ["Sost. Base",fmtNum(totalHours("sub_base")),"—","incluso nei Corsi Base"],
+        ["Corsi Avanzati",fmtNum(totalHours("advanced")),"0,00",fmtEuro(money.advanced)],
+        ["Sost. Avanzati",fmtNum(totalHours("sub_advanced")),"—","incluso nei Corsi Avanzati"],
+        ["Remo & Pagaia",fmtNum(totalHours("remo")),"14,00",fmtEuro(money.remo)],
+        ["Lezioni Private",String(sums.private.reduce((a,e)=>a+(e.count||1),0)),"—",fmtEuro(money.private)],
+        ["Canottaggio Scuole",fmtNum(totalHours("school")),"14,00",fmtEuro(money.school)],
+        ["Agonismo",fmtNum(totalHours("agonismo")),"14,00",fmtEuro(money.agonismo)]
+      ];
+      pdf.autoTable({startY:38,margin:{left:12,right:155},head:[["Specifica","N° ore","Euro/H","Totale Attività"]],body:summaryBody,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[230,230,230],textColor:20},theme:"grid"});
+      const sy=pdf.lastAutoTable.finalY+3;
+      pdf.setFont("helvetica","bold");pdf.setFontSize(9);pdf.text(`TOTALE LORDO: ${fmtEuro(grand)}`,12,sy+4);
+      pdf.text(`NETTO DA PAGARE: ${fmtEuro(grand)}`,12,sy+9);
+
+      const all=[];
+      Object.entries(monthData()).sort().forEach(([date,es])=>es.forEach(e=>all.push([
+        excelDateText(date), LABELS[e.type], e.type==="private"?(e.count||1):fmtNum(e.hours),
+        e.type==="private"?fmtEuro(e.amount||0):(rates[e.type]!==undefined?fmtEuro((+e.hours||0)*rates[e.type]):""), e.detail||""
+      ])));
+      pdf.autoTable({startY:38,margin:{left:148,right:10},head:[["Data","Attività","Ore/N.","Importo","Dettaglio"]],body:all.length?all:[["—","Nessuna attività","—","—",""]],styles:{fontSize:7,cellPadding:1.4},headStyles:{fillColor:[230,230,230],textColor:20},theme:"grid",columnStyles:{0:{cellWidth:20},1:{cellWidth:32},2:{cellWidth:15},3:{cellWidth:20},4:{cellWidth:45}}});
+
+      const pageH=pdf.internal.pageSize.getHeight();
+      pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+      pdf.text(`Data: ${new Date().toLocaleDateString("it-IT")}`,12,pageH-14);
+      pdf.text("Firma:",12,pageH-8);
+      // La firma di Nicolò è incorporata nel modello Excel; nel PDF viene riportato il nominativo.
+      pdf.setFont("helvetica","italic");pdf.setFontSize(11);pdf.text("Nicolò Ciapparelli",28,pageH-8);
+      pdf.save(`Foglio ore Canottaggio_${MONTHS[m]}_${y}.pdf`);
+      showToast("PDF compilato generato");
+    }catch(err){console.error(err);showToast("Errore nella generazione del PDF")}
   });
 
   if("serviceWorker" in navigator && location.protocol.startsWith("http")) {

@@ -1,4 +1,4 @@
-const CACHE="foglio-ore-v2";
+const CACHE="foglio-ore-v4";
 const CORE=["./","./index.html","./manifest.webmanifest","./Foglio_ore_template.xlsx"];
 
 self.addEventListener("install",event=>{
